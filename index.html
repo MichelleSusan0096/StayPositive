@@ -32,13 +32,20 @@
             user-select: none;
         }
 
-        /* Lightbulb Toggle */
-        .bulb-container {
+        /* Lightbulb Toggle and Timer Container */
+        .controls-container {
             position: absolute;
             top: 20px;
             right: 20px;
-            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             z-index: 100;
+        }
+
+        .bulb-container {
+            cursor: pointer;
+            margin-bottom: 8px;
         }
 
         .bulb {
@@ -51,6 +58,16 @@
         .light-mode .bulb {
             fill: #fbbf24;
             filter: drop-shadow(0 0 12px #fbbf24);
+        }
+
+        #timerDisplay {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
         }
 
         /* Heart Squad Styling */
@@ -120,7 +137,7 @@
             100% { transform: rotate(-45deg) scale(4); opacity: 0; }
         }
 
-        /* Message */
+        /* Messages */
         #message {
             position: relative;
             z-index: 10;
@@ -132,6 +149,28 @@
             transition: opacity 0.8s ease, transform 0.8s ease;
             pointer-events: none;
             text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        #grandLoveMessage {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            z-index: 200;
+            font-size: 6rem;
+            font-weight: 900;
+            text-align: center;
+            color: #ff4d6d;
+            opacity: 0;
+            pointer-events: none;
+            text-shadow: 0 0 30px rgba(255, 77, 109, 0.6);
+            transition: all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+        }
+
+        .show-grand {
+            opacity: 1 !important;
+            transform: translate(-50%, -50%) scale(1) !important;
         }
 
         .show-message {
@@ -170,7 +209,6 @@
             font-weight: 700;
             text-align: center;
             max-width: 280px;
-            /* Added text shadow for visibility against same-colored background elements */
             text-shadow: 0 1px 3px rgba(0,0,0,0.4); 
             font-size: 1.1rem;
             padding: 10px;
@@ -179,13 +217,18 @@
 </head>
 <body id="gameBody">
 
-    <div class="bulb-container" id="themeToggle" title="Toggle Light/Dark Mode">
-        <svg class="bulb" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1zM9 19h6v1H9v-1zm1 2h4v1h-4v-1z"/>
-        </svg>
+    <div class="controls-container">
+        <div class="bulb-container" id="themeToggle" title="Toggle Light/Dark Mode">
+            <svg class="bulb" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1zM9 19h6v1H9v-1zm1 2h4v1h-4v-1z"/>
+            </svg>
+        </div>
+        <div id="timerDisplay">01:00</div>
     </div>
 
     <div id="message">💖 Heart Master! 💖<br><span style="font-size: 1.2rem; font-weight: normal;">You've captured all the love in the world!</span></div>
+    
+    <div id="grandLoveMessage">I LOVE YOU</div>
     
     <div class="instruction" id="instructionText">Catch all hearts! Don't miss or more will spawn!</div>
 
@@ -194,6 +237,8 @@
         const body = document.getElementById('gameBody');
         const message = document.getElementById('message');
         const instructionText = document.getElementById('instructionText');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const grandLoveMessage = document.getElementById('grandLoveMessage');
 
         const loveQuotes = [
             "Love is composed of a single soul inhabiting two bodies.",
@@ -224,6 +269,39 @@
         const activeHearts = [];
         let heartsBursted = 0;
         let totalHeartsCreated = 0;
+        let timeLeft = 60;
+        let gameActive = true;
+
+        // Timer Functionality
+        const countdown = setInterval(() => {
+            if (!gameActive) {
+                clearInterval(countdown);
+                return;
+            }
+            timeLeft--;
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                triggerFinale();
+            }
+        }, 1000);
+
+        function triggerFinale() {
+            gameActive = false;
+            activeHearts.forEach(heartObj => {
+                if (!heartObj.isBursted) {
+                    burstHeart(heartObj);
+                }
+            });
+            
+            // Show the grand message
+            grandLoveMessage.classList.add('show-grand');
+            instructionText.style.opacity = '0';
+            timerDisplay.style.opacity = '0';
+        }
 
         // Dark/Light Mode Toggle
         themeToggle.addEventListener('click', (e) => {
@@ -233,7 +311,8 @@
 
         // Miss detection
         body.addEventListener('click', (e) => {
-            if (!e.target.closest('.heart-container') && !e.target.closest('.bulb-container')) {
+            if (!gameActive) return;
+            if (!e.target.closest('.heart-container') && !e.target.closest('.controls-container')) {
                 spawnRandomHeart();
             }
         });
@@ -267,17 +346,8 @@
 
             container.addEventListener('click', (e) => {
                 e.stopPropagation(); 
-                if (!heartObj.isBursted) {
-                    heartObj.isBursted = true;
-                    heartDiv.classList.add('clicked');
-                    heartsBursted++;
-                    
-                    const centerX = heartObj.x + sizePx/2;
-                    const centerY = heartObj.y + sizePx/2;
-                    
-                    createHeartBurst(centerX, centerY, config.color, config.emoji);
-                    showFloatingQuote(centerX, centerY, config.color);
-                    updateProgress();
+                if (!heartObj.isBursted && gameActive) {
+                    burstHeart(heartObj);
                 }
             });
 
@@ -285,19 +355,32 @@
             updateProgress();
         }
 
+        function burstHeart(heartObj) {
+            heartObj.isBursted = true;
+            heartObj.innerEl.classList.add('clicked');
+            heartsBursted++;
+            
+            const centerX = heartObj.x + heartObj.size/2;
+            const centerY = heartObj.y + heartObj.size/2;
+            
+            createHeartBurst(centerX, centerY, heartObj.config.color, heartObj.config.emoji);
+            
+            // Only show individual quotes if game is active (manual capture)
+            if (gameActive) {
+                showFloatingQuote(centerX, centerY, heartObj.config.color);
+            }
+            
+            updateProgress();
+        }
+
         function showFloatingQuote(x, y, color) {
             const quoteEl = document.createElement('div');
             quoteEl.className = 'floating-quote';
             quoteEl.innerText = loveQuotes[Math.floor(Math.random() * loveQuotes.length)];
-            
-            // Positioning
             quoteEl.style.left = `${x}px`;
             quoteEl.style.top = `${y}px`;
             quoteEl.style.transform = 'translate(-50%, -50%)';
-            
-            // Set exact color of the heart
             quoteEl.style.color = color;
-            
             document.body.appendChild(quoteEl);
 
             quoteEl.animate([
@@ -321,10 +404,13 @@
 
         function updateProgress() {
             const remaining = totalHeartsCreated - heartsBursted;
-            if (remaining === 0) {
+            if (remaining === 0 && gameActive) {
+                gameActive = false;
                 message.classList.add('show-message');
                 instructionText.style.opacity = '0';
-            } else {
+                timerDisplay.style.opacity = '0';
+                clearInterval(countdown);
+            } else if (gameActive) {
                 instructionText.innerText = `Hearts remaining: ${remaining} (Don't miss!)`;
             }
         }
